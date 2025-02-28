@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/AuditApp/static/css/main.c06b08cc.css",
-    "main.js": "/AuditApp/static/js/main.349da88b.js",
+    "main.css": "/AuditApp/static/css/main.eb240075.css",
+    "main.js": "/AuditApp/static/js/main.0b8f9e72.js",
     "static/js/453.11df5450.chunk.js": "/AuditApp/static/js/453.11df5450.chunk.js",
     "index.html": "/AuditApp/index.html",
-    "main.c06b08cc.css.map": "/AuditApp/static/css/main.c06b08cc.css.map",
-    "main.349da88b.js.map": "/AuditApp/static/js/main.349da88b.js.map",
+    "main.eb240075.css.map": "/AuditApp/static/css/main.eb240075.css.map",
+    "main.0b8f9e72.js.map": "/AuditApp/static/js/main.0b8f9e72.js.map",
     "453.11df5450.chunk.js.map": "/AuditApp/static/js/453.11df5450.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.c06b08cc.css",
-    "static/js/main.349da88b.js"
+    "static/css/main.eb240075.css",
+    "static/js/main.0b8f9e72.js"
   ]
 }
