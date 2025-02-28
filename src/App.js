@@ -1,106 +1,150 @@
 import React, { useState, useEffect } from "react";
+import "./style.css";
+
+const categories = ["Total", "Exterior", "Dining Room", "Service Line", "Kitchen", "Back of House", "Walk-In Cooler", "Administrative"];
 
 const initialAuditData = [
   { id: 1, category: "Exterior", question: "Parking lot is clean and free of debris", points: 2, status: "", comment: "" },
   { id: 2, category: "Exterior", question: "Building exterior is in good repair", points: 2, status: "", comment: "" },
   { id: 3, category: "Exterior", question: "Dumpster area is clean and organized", points: 2, status: "", comment: "" },
   { id: 4, category: "Dining Room", question: "Tables and chairs are clean and in good condition", points: 3, status: "", comment: "" },
-  { id: 5, category: "Dining Room", question: "Floor is clean and free of spills", points: 3, status: "", comment: "" },
-  { id: 6, category: "Dining Room", question: "Restrooms are stocked and clean", points: 4, status: "", comment: "" },
-  { id: 7, category: "Kitchen", question: "Food is stored at the correct temperature", points: 5, status: "", comment: "" },
-  { id: 8, category: "Kitchen", question: "Employees are wearing proper protective gear", points: 4, status: "", comment: "" },
-  { id: 9, category: "Kitchen", question: "Work surfaces are properly sanitized", points: 3, status: "", comment: "" },
 ];
 
 export default function AuditApp() {
-  const [auditData, setAuditData] = useState(() => {
-    const savedData = localStorage.getItem("auditData");
-    return savedData ? JSON.parse(savedData) : initialAuditData;
-  });
+  const [page, setPage] = useState("home");
+  const [restaurantNumber, setRestaurantNumber] = useState("");
+  const [auditHistory, setAuditHistory] = useState([]);
+  const [currentAudit, setCurrentAudit] = useState(null);
 
   useEffect(() => {
-    localStorage.setItem("auditData", JSON.stringify(auditData));
-  }, [auditData]);
+    localStorage.setItem("auditHistory", JSON.stringify(auditHistory));
+  }, [auditHistory]);
+
+  const handleStartAudit = () => {
+    const newAudit = {
+      id: Date.now(),
+      restaurant: restaurantNumber,
+      date: new Date().toLocaleDateString(),
+      data: JSON.parse(JSON.stringify(initialAuditData)),
+    };
+    setAuditHistory([...auditHistory, newAudit]);
+    setCurrentAudit(newAudit);
+    setPage("audit");
+  };
+
+  const handleEditAudit = (audit) => {
+    setCurrentAudit(audit);
+    setPage("audit");
+  };
+
+  const handleDeleteAudit = (auditId) => {
+    if (window.confirm("Are you sure you want to delete this audit?")) {
+      setAuditHistory(auditHistory.filter(audit => audit.id !== auditId));
+    }
+  };
 
   const handleStatusChange = (id, value) => {
-    setAuditData((prevData) =>
-      prevData.map((item) => (item.id === id ? { ...item, status: value } : item))
+    setCurrentAudit((prevAudit) => {
+      const updatedData = prevAudit.data.map((item) =>
+        item.id === id ? { ...item, status: value } : item
+      );
+      const updatedAudit = { ...prevAudit, data: updatedData };
+      setAuditHistory((prevHistory) =>
+        prevHistory.map((audit) => (audit.id === updatedAudit.id ? updatedAudit : audit))
+      );
+      return updatedAudit;
+    });
+  };
+
+  const calculateScore = () => {
+    const totalPoints = currentAudit?.data.reduce((sum, item) => sum + (item.status === "Yes" ? item.points : 0), 0) || 0;
+    const possiblePoints = currentAudit?.data.reduce((sum, item) => sum + (item.status !== "N/A" ? item.points : 0), 0) || 0;
+    return possiblePoints ? ((totalPoints / possiblePoints) * 100).toFixed(1) : "N/A";
+  };
+
+  const calculateCompleted = () => {
+    const answered = currentAudit?.data.filter(item => item.status).length || 0;
+    return `${answered}/${currentAudit?.data.length || 0}`;
+  };
+
+  if (page === "home") {
+    return (
+      <div className="home-container">
+        <h1>Welcome to Bolay's Quality of Operations Audit</h1>
+        <button className="primary-button" onClick={() => setPage("restaurantSelect")}>Enter</button>
+      </div>
     );
-  };
+  }
 
-  const handleCommentChange = (id, value) => {
-    setAuditData((prevData) =>
-      prevData.map((item) => (item.id === id ? { ...item, comment: value } : item))
+  if (page === "audit") {
+    return (
+      <div className="audit-container">
+        <div className="audit-header">
+          <p><strong>Restaurant:</strong> {currentAudit?.restaurant}</p>
+          <p><strong>Date:</strong> {currentAudit?.date}</p>
+          <p><strong>Score:</strong> {calculateScore()}%</p>
+          <p><strong>Completed:</strong> {calculateCompleted()}</p>
+        </div>
+        {currentAudit?.data.map((item) => (
+          <div key={item.id} className="audit-item">
+            <p><strong>{item.category}</strong></p>
+            <p>{item.question} ({item.points} pts)</p>
+            <div>
+              {["Yes", "No", "N/A"].map((option) => (
+                <button
+                  key={option}
+                  className={`option-button ${item.status === option ? "selected-button" : ""}`}
+                  onClick={() => handleStatusChange(item.id, option)}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+        <button className="secondary-button" onClick={() => setPage("restaurantSelect")}>Back</button>
+      </div>
     );
-  };
-
-  const exportToCSV = () => {
-    const csvContent =
-      "data:text/csv;charset=utf-8," +
-      ["Category,Question,Points,Status,Comment"].concat(
-        auditData.map((row) => `${row.category},${row.question},${row.points},${row.status},${row.comment}`)
-      ).join("\n");
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "audit_results.csv");
-    document.body.appendChild(link);
-    link.click();
-  };
+  }
 
   return (
-    <div style={{ padding: '20px', maxWidth: '800px', margin: 'auto', fontFamily: 'Arial, sans-serif' }}>
-      <h1 style={{ fontSize: '26px', fontWeight: 'bold', textAlign: 'center', marginBottom: '20px', color: '#333' }}>Restaurant Audit Form</h1>
-      {auditData.map((item) => (
-        <div key={item.id} style={{ border: '1px solid #ddd', padding: '15px', marginBottom: '12px', borderRadius: '8px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center' }}>
-          <div style={{ flex: 2 }}>
-            <p style={{ fontWeight: 'bold', color: '#333', marginBottom: '5px' }}>{item.category}</p>
-            <p style={{ fontSize: '16px', color: '#555' }}>{item.question} ({item.points} pts)</p>
-          </div>
-          <div style={{ flex: 1, display: 'flex', gap: '5px', justifyContent: 'center' }}>
-            {["Yes", "No", "N/A"].map((option) => (
-              <button
-                key={option}
-                onClick={() => handleStatusChange(item.id, option)}
-                style={{
-                  padding: '10px',
-                  borderRadius: '5px',
-                  border: item.status === option ? '2px solid #007bff' : '1px solid #ccc',
-                  backgroundColor: item.status === option ? '#007bff' : '#f8f8f8',
-                  color: item.status === option ? 'white' : 'black',
-                  cursor: 'pointer',
-                  minWidth: '50px',
-                }}
-              >
-                {option}
-              </button>
+    <div className="restaurant-select-container">
+      <h1>Select Restaurant</h1>
+      <select value={restaurantNumber} onChange={(e) => setRestaurantNumber(e.target.value)}>
+        <option value="">-- Select --</option>
+        {[...Array(10)].map((_, i) => (
+          <option key={i + 201} value={i + 201}>{i + 201}</option>
+        ))}
+      </select>
+      <button className="secondary-button" onClick={() => setPage("home")}>Back</button>
+      {restaurantNumber && (
+        <table className="audit-table">
+          <thead>
+            <tr>
+              <th>Edit</th>
+              <th>Rest. #</th>
+              <th>Date</th>
+              <th>Score</th>
+              <th>Delete</th>
+            </tr>
+          </thead>
+          <tbody>
+            {auditHistory.filter(a => a.restaurant === restaurantNumber).map((audit) => (
+              <tr key={audit.id}>
+                <td><button className="edit-button" onClick={() => handleEditAudit(audit)}>Edit</button></td>
+                <td>{audit.restaurant}</td>
+                <td>{audit.date}</td>
+                <td>{calculateScore()}%</td>
+                <td><button className="delete-button" onClick={() => handleDeleteAudit(audit.id)}>Delete</button></td>
+              </tr>
             ))}
-          </div>
-          <div style={{ flex: 2 }}>
-            <textarea
-              value={item.comment}
-              onChange={(e) => handleCommentChange(item.id, e.target.value)}
-              placeholder="Add comments if necessary..."
-              style={{ width: '100%', height: '40px', padding: '8px', borderRadius: '5px', border: '1px solid #ccc' }}
-            />
-          </div>
-        </div>
-      ))}
-      <button onClick={exportToCSV} style={{ width: '100%', padding: '12px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '16px' }}>
-        Export Audit
-      </button>
+            <tr>
+              <td><button className="new-button" onClick={handleStartAudit}>New</button></td>
+              <td colSpan={4}></td>
+            </tr>
+          </tbody>
+        </table>
+      )}
     </div>
   );
-}
-
-// Register service worker for PWA
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/service-worker.js')
-    .then((registration) => {
-      console.log('Service Worker registered with scope:', registration.scope);
-    })
-    .catch((error) => {
-      console.log('Service Worker registration failed:', error);
-    });
 }
